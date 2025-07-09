@@ -1,0 +1,9 @@
+yt-dlp>=2024.4.9
+moviepy>=1.0.3
+ffmpeg-python>=0.2.0
+openai>=1.14.3
+streamlit>=1.33.0
+pytest>=8.0.0
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+backoff>=2.2.1

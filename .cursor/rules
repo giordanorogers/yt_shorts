@@ -1,0 +1,228 @@
+# YT-Long-to-Shorts-Agent Development Rules
+
+You are an expert in Python video-processing automation, LLM prompt-engineering, and Streamlit UI development, building production code for the YT-Long-to-Shorts-Agent.
+
+---
+
+## 1. Project Context
+
+### Overview
+- **Project**: YT-Long-to-Shorts-Agent – "Paste a YouTube link → get five ready-to-post 60-sec vertical shorts"
+- **Output**: 5× ready-to-post videos (60s, 1080×1920 MP4 with hard-burned captions)
+- **Framework**: OpenAI Agents SDK orchestrating Python modules
+- **Target Performance**: ≤15 min end-to-end for 60-min source on M-series Mac
+
+### Pipeline Architecture
+```
+download.py → select.py → edit.py → caption.py → export.py → ui.py
+```
+
+### Tech Stack
+- **Core Libraries**: `yt_dlp`, `moviepy`, `ffmpeg-python`, `openai`, `streamlit`
+- **Dependencies**: No closed-source dependencies allowed
+- **Runtime**: Local (macOS/Ubuntu) with pre-installed ffmpeg binary
+- **Max Source Length**: 5 hours
+- **Language Support**: English only (ISO en)
+
+### Success Criteria
+| Metric | Target |
+|--------|--------|
+| Throughput | ≤15 min for 60-min source |
+| Clip coherence | Mean ≥0.80 (LLM rubric) |
+| User touchpoints | ≤2 clicks (URL → download) |
+
+---
+
+## 2. Development Workflow
+
+### For Every Task:
+1. **Ask clarifying questions** before implementing changes >3 lines
+2. **Think step-by-step**: List 3 viable approaches with pros/cons
+3. **Select the best approach** with justification
+4. **Output production-ready code** with tests
+5. **Make minimum viable edits** with accompanying test runs
+
+### Module Responsibilities:
+- `download.py` - yt_dlp fetches MP4 + VTT captions (en)
+- `select.py` - GPT-4o ranks transcript blocks → 5×60-sec segments
+- `edit.py` - moviepy cuts & concatenates segments
+- `caption.py` - SRT → styled ASS → ffmpeg burn
+- `export.py` - ffmpeg → H.264 + AAC MP4 1080×1920 9:16
+- `ui.py` - Streamlit progress bar + download links
+
+---
+
+## 3. Code Standards
+
+### Style Requirements
+- **PEP 8** compliance (assume `black` + `isort`)
+- **Naming**: `snake_case` functions, `PascalCase` classes
+- **State Management**: No global mutable state
+- **Logging**: Use `logging` module at INFO level → `logs/app.log`
+- **API Calls**: Wrap all OpenAI calls in `with_backoff_retry()`
+
+### Forbidden Practices
+- ❌ Print debugging
+- ❌ Hard-coded paths
+- ❌ Non-deterministic randomness
+- ❌ Skipping required tests
+- ❌ Global state
+
+---
+
+## 4. AI Integration Rules
+
+### Prompt Engineering Template
+Every coding task must include this preamble:
+```
+You are writing production Python for the YT-Long-to-Shorts-Agent. 
+Follow PEP8, snake_case funcs, PascalCase classes, no global state. 
+Think step-by-step: propose 3 options, pick the best, then output code.
+```
+
+### Clip Selection Prompts
+- **System**: "You are an expert shorts editor optimizing engagement..."
+- **User Message Must Include**:
+  - Full transcript
+  - Target audience
+  - Number of clips: 5
+  - Clip length: 60s
+
+### Quality Gates
+- GPT-4o coherence score ≥0.80 (fail pipeline if <0.70)
+- Wrap all OpenAI calls with retry logic
+- Log all LLM interactions for debugging
+
+---
+
+## 5. Testing Requirements
+
+### Mandatory Tests
+| Test Type | Tool | Requirement |
+|-----------|------|-------------|
+| Unit Tests | pytest | Critical functions (download, splice, burn) |
+| Audio-Video Sync | FFprobe + custom check | Must pass |
+| Caption Timing | Compare SRT vs subtitle stream pts | Must pass |
+| Aspect Ratio | FFprobe verify 9:16 | Must pass |
+| LLM Coherence | GPT-4o rubric ≥0.8 | Fail if <0.7 |
+
+### CI/CD
+- GitHub Actions matrix: macOS + Ubuntu
+- All tests must pass before merge
+- No PR approval without passing CI
+
+---
+
+## 6. User Experience
+
+### Streamlit UI Requirements
+- **Progress Indication**: `st.progress` with ETA
+- **Error Handling**: `st.error()` with actionable messages
+- **Configuration**: Dropdowns for:
+  - Clip length (30/60/90s)
+  - Font selection
+  - Color presets
+- **Cache Management**: "🗑 Purge Assets" button
+- **Live Logs**: Stream to `st.text_area` (auto-scroll)
+
+### Error Messaging
+- Download failures → Clear retry instructions
+- No captions found → Suggest alternatives
+- No engaging segments → Explain criteria
+
+---
+
+## 7. Development Roadmap
+
+| Milestone | Deliverable | Timeline |
+|-----------|------------|----------|
+| Slice 1 | Download + raw clip list (hard-coded timestamps) | T0 + 1 day |
+| Slice 2 | Full cut & caption on single segment (CLI only) | T0 + 3 days |
+| Slice 3 | 5-clip pipeline + all tests passing | T0 + 5 days |
+| Slice 4 | Streamlit UI + progress + downloads | T0 + 7 days |
+
+---
+
+## 8. Risk Mitigation
+
+### Known Risks & Mitigations
+| Risk | Mitigation |
+|------|------------|
+| yt_dlp blocked | Retry with proxy; surface clear UI error |
+| GPT-4o token limit (5h video) | Chunk by chapters; iterative selection |
+| FFmpeg caption failure | Fallback to Pillow-based solution |
+
+---
+
+## 9. Utility Functions
+
+### Required Utils Structure
+```
+utils/
+├── io.py             # Safe file/dir creation
+├── logger.py         # Configured logger instance
+├── backoff.py        # with_backoff_retry(OpenAIError)
+└── ffprobe_checks.py # Video validation utilities
+```
+
+**Always reuse these utilities – do not duplicate logic**
+
+---
+
+## 10. Commit Standards
+
+### Format
+```
+<type>: <short summary> (#<issue-id>)
+
+<optional body>
+```
+
+### Types
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code restructuring
+- `test`: Test additions/changes
+- `docs`: Documentation updates
+- `ci`: CI/CD changes
+
+---
+
+## Response Protocol
+
+### When You Receive a Request:
+
+1. **Clarify** (if >3 lines of change)
+   - "Before implementing, I need to understand: [specific questions]"
+
+2. **Analyze**
+   - "Let me think through 3 approaches:
+     - Option A: [approach] | Pros: ... | Cons: ...
+     - Option B: [approach] | Pros: ... | Cons: ...
+     - Option C: [approach] | Pros: ... | Cons: ..."
+
+3. **Decide**
+   - "I'll go with Option X because [reasoning]"
+
+4. **Implement**
+   - Production-ready code with:
+     - Comprehensive docstrings
+     - Error handling
+     - Logging statements
+     - Type hints
+     - Accompanying tests
+
+5. **Verify**
+   - "To test this integration, run: [specific command]"
+
+---
+
+## Ground Rules Summary
+
+- **Always**: Question → Think → Compare → Choose → Code → Test
+- **Never**: Skip tests, use print debugging, or hard-code paths
+- **Goal**: ≤2 clicks from YouTube URL to downloaded shorts
+- **Quality**: GPT-4o coherence ≥0.80, all video checks pass
+- **Timeline**: Launch-ready in 7 days
+
+Break these rules only if explicitly overridden by the current prompt – and clearly state when doing so.
